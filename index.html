@@ -83,6 +83,12 @@
             text-align: left; /* テキストを左寄せ */
         }
         
+        /* テーブルのセル内の余白を広げて、クリックしやすくする */
+        #databaseTable td, #printSettingDataTable td {
+            padding: 10px 8px; /* 縦の余白をしっかり取る */
+            cursor: pointer;   /* マウスを乗せた時に指マークにして選択可能であることを示す */
+        }
+        
         button {
             width: 98%; /* ボタンの幅 */
             padding: 1vh; /* ボタン内の余白 */
@@ -603,11 +609,6 @@
                 gridextractedFlag = false; // ここでフラグをOFFにする
                 renderGrid(databaseData,'#databaseTable');
             }
-
-
-
-
-                
             
                
             // 引数に渡したデータの内容を任意のテーブルのグリッドに描画する関数------------------------------------------
@@ -699,7 +700,6 @@
                 console.log(`${targetTableSelector} に ${gridData.length} 件のデータをグリッドに描画しました。`);
                 
             }
-
 
                 
             // databaseDataの中身をIDでデータを削除する---------------------------------------------------------
@@ -816,57 +816,66 @@
                     row.classList.remove('selected');
                 });
             }
-
-                
-                
-            //テーブルの行をクリックした際の処理（行の選択/複数選択)の関数------------------------------------------
-            //@param {Event} event - クリックイベントオブジェクト
+            
+            
+            //テーブルの行をクリック（タップ）した際の選択・解除処理
+            //役割：PCでのクリックやタブレットでのタップ操作に応じて、行のハイライト状態と描画基準を切り替えます。
             function handleTableRowClick(event) {
+                
+                // 1. クリックされた要素から、一番近い親の「tr（行）」を探す
                 const row = event.target.closest('tr');
+                
+                // ガード句：行が存在しない場合、または入力欄やボタンを直接触った場合は処理を中断（数値入力を優先）
                 if (!row || event.target.matches('input, select, button')) return;
-                    
-                // クリックされた行のIDとデータを取得
+                
+                // 2. 行に紐付けられたIDを取得し、databaseData または inputData から該当するデータオブジェクトを探す
                 const targetId = Number(row.dataset.id);
                 const clickedData = [...databaseData, ...inputData].find(item => item.id === targetId);
+                
+                // --- 選択状態（トグル式）の管理 ---
+                // 現在の行がすでに選択されている（selectedクラスを持っている）かを確認
+                const isAlreadySelected = row.classList.contains('selected');
+                
+                // 【解説：トグル（反転）ロジック】
+                // Ctrlキーの有無に関わらず、クリックするたびに「選択 ↔ 解除」を切り替えます。
+                // これにより、タブレットのようにCtrlキーがない環境でも複数選択が可能になります。
+                if (isAlreadySelected) {
                     
-                // --- 選択状態の管理 ---
-                if (event.ctrlKey || event.metaKey) {
-                    // 【Ctrlキーあり】選択状態を反転（トグル）
-                    row.classList.toggle('selected');
+                    // すでに選択済みなら、クラスを削除して解除する
+                    row.classList.remove('selected');
+
                 } else {
-                    // 【Ctrlキーなし】単一選択モード
-                    const isAlreadySelected = row.classList.contains('selected');
-                    const table = row.closest('table');
-                        
-                    // 他の行の選択をすべて解除
-                    table.querySelectorAll('tr').forEach(r => r.classList.remove('selected'));
-                        
-                    // もともと選択されていなかった場合のみ選択する（選択済みなら解除される）
-                    if (!isAlreadySelected) {
-                         row.classList.add('selected');
-                    }
+                    // 未選択なら、クラスを追加して選択状態にする
+                    row.classList.add('selected');
                 }
-                    
+                
                 // --- 描画基準（activeRowData）の更新ルール ---
+                // マウス描画などの「操作対象」をどのデータにするかを決定します。
                 if (row.classList.contains('selected')) {
-                        
-                    // クリックした行が「選択状態」になったなら、それを基準にする
+                    
+                    // 今クリックした行が「選択」されたなら、そのデータを操作基準にする
                     activeRowData = clickedData;
+
                 } else {
-                        
-                    // クリックした行が「選択解除」された場合
-                    // 他に選択されている行があれば、そのうちの一つ（最後の行など）を基準にする
+
+                    // 今クリックした行が「解除」された場合、他に選択されている行がまだあるか探す
                     const otherSelectedRow = document.querySelector('.selected');
+                    
                     if (otherSelectedRow) {
+                        
+                        // 他に選択中の行があれば、そのうちの一つを新しい操作基準に設定する
                         const altId = Number(otherSelectedRow.dataset.id);
+                        
                         activeRowData = [...databaseData, ...inputData].find(item => item.id === altId);
+                    
                     } else {
-                        // 他に選択されている行が一つもなければ、基準をクリア
+                        
+                        // 他に選択されている行が一つもなければ、基準を空にする
                         activeRowData = null;
                     }
                 }
-                    
-                // 基準が変わったのでCanvasを再描画
+                
+                // 3. 選択状態が変わったため、Canvasを最新の状態に再描画する
                 redrawAllConfirmedLines();
             }
             
