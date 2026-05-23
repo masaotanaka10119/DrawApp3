@@ -142,8 +142,12 @@
             }
             
             #imageCanvas {
-                width: 100% !important;
-                height: auto !important;
+                position: absolute !important;   /* 印刷時のみ絶対配置 */
+                top: 0 !important;
+                left: 0 !important;
+                width: 100vw !important;         /* 用紙の横幅に合わせる */
+                height: 100vh !important;        /* 用紙の縦幅に合わせる */
+                object-fit: contain !important;  /* 縦横比を維持してはみ出さない */
                 border: none !important;
             }
             
